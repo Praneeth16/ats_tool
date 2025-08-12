@@ -19,8 +19,8 @@ import Fuse from 'fuse.js';
 // --------------------------------------
 const STAGES = [
   "Sourced",
-  "Interview: First Round",
-  "Interview: Second Round",
+  "Interview: 1st Round",
+  "Interview: 2nd Round",
   "Interview: Final round",
   "Hired",
   "Rejected",
@@ -82,8 +82,8 @@ const isStage = (s: any): s is Stage => (STAGES as readonly string[]).includes(s
 
 const normalizeStage = (s: any): Stage => {
   const v = String(s || '').toLowerCase();
-  if (v === 'applied' || v === 'interview stage 1') return 'Interview: First Round';
-  if (v === 'screening' || v === 'interview stage 2') return 'Interview: Second Round';
+  if (v === 'applied' || v === 'interview stage 1' || v === 'interview: first round' || v === 'interview first round') return 'Interview: 1st Round';
+  if (v === 'screening' || v === 'interview stage 2' || v === 'interview: second round' || v === 'interview second round') return 'Interview: 2nd Round';
   if (v === 'offer' || v === 'interview') return 'Interview: Final round';
   if (isStage(s)) return s as Stage;
   return 'Sourced';
@@ -320,8 +320,8 @@ export default function App() {
   const [blindMode, setBlindMode] = useState<boolean>(false);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [wipLimits, setWipLimits] = useState<Record<Stage, number>>({ Sourced: 20, "Interview: First Round": 15, "Interview: Second Round": 12, "Interview: Final round": 10, Hired: 999, Rejected: 999 });
-  const [slaDays, setSlaDays] = useState<Record<Stage, number>>({ Sourced: 7, "Interview: First Round": 7, "Interview: Second Round": 5, "Interview: Final round": 7, Hired: 999, Rejected: 999 });
+  const [wipLimits, setWipLimits] = useState<Record<Stage, number>>({ Sourced: 20, "Interview: 1st Round": 15, "Interview: 2nd Round": 12, "Interview: Final round": 10, Hired: 999, Rejected: 999 });
+  const [slaDays, setSlaDays] = useState<Record<Stage, number>>({ Sourced: 7, "Interview: 1st Round": 7, "Interview: 2nd Round": 5, "Interview: Final round": 7, Hired: 999, Rejected: 999 });
   const [filters, setFilters] = useState<{ tags: string[]; scoreMin?: number; scoreMax?: number; appliedFrom?: string; appliedTo?: string }>({ tags: [] });
   const [views, setViews] = useState<{ id: string; name: string; filters: typeof filters; query: string }[]>(() => safeJSONParse(localStorage.getItem(VIEWS_KEY), [] as any[]));
   useEffect(() => { localStorage.setItem(VIEWS_KEY, JSON.stringify(views)); }, [views]);
@@ -338,8 +338,8 @@ export default function App() {
           createdAt: new Date().toISOString(),
           jd: null,
           candidates: [
-            { id: uid(), name: "Aarav Sharma", email: "aarav@example.com", tags: ["React", "TypeScript"], score: 82, resume: null, notes: "Good projects.", stage: "Interview: Second Round", appliedAt: new Date().toISOString() },
-            { id: uid(), name: "Sara Khan", email: "sara@example.com", tags: ["UI/UX", "Next.js"], score: 76, resume: null, stage: "Interview: First Round", appliedAt: new Date().toISOString() },
+            { id: uid(), name: "Aarav Sharma", email: "aarav@example.com", tags: ["React", "TypeScript"], score: 82, resume: null, notes: "Good projects.", stage: "Interview: 2nd Round", appliedAt: new Date().toISOString() },
+            { id: uid(), name: "Sara Khan", email: "sara@example.com", tags: ["UI/UX", "Next.js"], score: 76, resume: null, stage: "Interview: 1st Round", appliedAt: new Date().toISOString() },
             { id: uid(), name: "Rohit Verma", email: "rohit@example.com", tags: ["Tailwind", "Vite"], score: 68, resume: null, stage: "Sourced", appliedAt: new Date().toISOString() },
           ],
         },
@@ -518,7 +518,7 @@ export default function App() {
     return list;
   }, [job, query, filters]);
   const byStage: Record<Stage, Candidate[]> = useMemo(() => {
-    const res: Record<Stage, Candidate[]> = { Sourced: [], "Interview: First Round": [], "Interview: Second Round": [], "Interview: Final round": [], Hired: [], Rejected: [] } as Record<Stage, Candidate[]>;
+    const res: Record<Stage, Candidate[]> = { Sourced: [], "Interview: 1st Round": [], "Interview: 2nd Round": [], "Interview: Final round": [], Hired: [], Rejected: [] } as Record<Stage, Candidate[]>;
     for (const c of filtered) res[normalizeStage(c.stage)].push({ ...c, stage: normalizeStage(c.stage) });
     return res;
   }, [filtered]);
@@ -767,14 +767,34 @@ export default function App() {
       {/* Candidate Modal */}
       <Modal open={candModalOpen} onClose={() => setCandModalOpen(false)} title={editingCandidate ? (editingCandidate.id === "temp" ? "Add Candidate" : "Edit Candidate") : "Add Candidate"}>
         {job && (
-          <CandidateForm initial={editingCandidate?.id ? editingCandidate : undefined} onSubmit={async (vals, file) => {
-            if (file && persistMode === 'supabase' && sb) {
-              try { const ref = await uploadToStorage(sb, 'resumes', file); vals = { ...vals, resume: ref }; } catch (e: any) { show(`Resume upload failed: ${e.message || e}`); }
-            }
-            if (editingCandidate && editingCandidate.id !== "temp") { await updateCandidate(job.id, editingCandidate.id, vals); show("Candidate updated"); }
-            else { await createCandidate(job.id, vals); }
-            setCandModalOpen(false); setEditingCandidate(null);
-          }} />
+          <div>
+            <CandidateForm initial={editingCandidate?.id ? editingCandidate : undefined} onSubmit={async (vals, file) => {
+              if (file && persistMode === 'supabase' && sb) {
+                try { const ref = await uploadToStorage(sb, 'resumes', file); vals = { ...vals, resume: ref }; } catch (e: any) { show(`Resume upload failed: ${e.message || e}`); }
+              }
+              if (editingCandidate && editingCandidate.id !== "temp") { await updateCandidate(job.id, editingCandidate.id, vals); show("Candidate updated"); }
+              else { await createCandidate(job.id, vals); }
+              setCandModalOpen(false); setEditingCandidate(null);
+            }} />
+
+            {editingCandidate && editingCandidate.id !== "temp" && (
+              <div className="mt-3 flex justify-between">
+                <button
+                  onClick={async () => {
+                    if (!job || !editingCandidate) return;
+                    const ok = window.confirm('Delete this candidate?');
+                    if (!ok) return;
+                    await deleteCandidate(job.id, editingCandidate.id);
+                    setCandModalOpen(false);
+                    setEditingCandidate(null);
+                  }}
+                  className="px-3 py-2 rounded-xl border text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete Candidate
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </Modal>
 
@@ -942,7 +962,7 @@ function CandidateForm({ initial, onSubmit }: { initial?: Partial<Candidate>; on
           <label className="text-sm text-zinc-500">Attach Resume (optional)</label>
           <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e) => setFile(e.target.files?.[0] || null)} className="mt-1 block w-full text-sm" />
         </div>
-        {stage === 'Interview: Second Round' && (
+        {stage === 'Interview: 2nd Round' && (
           <div className="md:col-span-2">
             <label className="text-sm text-zinc-500">Case Study Upload (placeholder)</label>
             <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={(e)=> setCaseStudy(e.target.files?.[0] || null)} className="mt-1 block w-full text-sm" />
